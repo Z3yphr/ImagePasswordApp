@@ -36,8 +36,14 @@ class PasswordManager {
     document.getElementById('account-selector').addEventListener('change', () => this.updateAccountSelection());
     document.getElementById('verify-button').addEventListener('click', () => this.verifyImage());
 
-    // Add this line in the initUI() function to set up the event listener:
-    document.getElementById('reset-verify-button').addEventListener('click', () => this.resetVerification());
+    // Check if reset button exists before adding event listener
+    const resetButton = document.getElementById('reset-verify-button');
+    if (resetButton) {
+      resetButton.addEventListener('click', () => this.resetVerification());
+    }
+
+    // Always call resetVerificationState - it will create the button if needed
+    this.resetVerificationState();
 
     // Initialize lists
     this.updateAccountsList();
@@ -153,10 +159,16 @@ class PasswordManager {
 
   /**
    * Verify image password for selected account
+   * This method belongs in the app.js file, not in ImagePasswordSystem
    */
   async verifyImage() {
+    // Get the current selections
     const accountId = document.getElementById('account-selector').value;
-    const imageFile = document.getElementById('verify-image').files[0];
+    const fileInput = document.getElementById('verify-image');
+    const imageFile = fileInput.files[0];
+
+    // Reset previous verification state
+    document.getElementById('account-details').style.display = 'none';
 
     // Validate inputs
     if (!accountId) {
@@ -169,6 +181,7 @@ class PasswordManager {
       return;
     }
 
+    // Find the selected account
     const account = this.accounts.find(acc => acc.id === accountId);
     if (!account) {
       this.showAlert('Account not found', 'danger');
@@ -179,7 +192,13 @@ class PasswordManager {
       // Show loading indicator
       this.showAlert('Verifying image...', 'info');
 
+      // Now perform the actual verification using the ImagePasswordSystem
       const isMatch = await this.imagePasswordSystem.verifyImagePassword(imageFile, account.password);
+
+      console.log("Verification result:", isMatch);
+
+      // Reset the file input to ensure a fresh file read on next attempt
+      fileInput.value = '';
 
       if (isMatch) {
         document.getElementById('account-username').textContent = account.username;
@@ -192,6 +211,7 @@ class PasswordManager {
         this.showAlert('Authentication failed. The image does not match.', 'danger');
       }
     } catch (error) {
+      console.error("Verification error:", error);
       this.showAlert(`Error: ${error.message}`, 'danger');
     }
   }
@@ -268,8 +288,11 @@ class PasswordManager {
   }
 
   /**
-   * Update the account selector dropdown
+   * Update the account selector dropdown and handle selection changes
+   * Add this to your app.js file
    */
+
+  // Enhanced method to update the account selector
   updateAccountSelector() {
     const selector = document.getElementById('account-selector');
 
@@ -286,6 +309,39 @@ class PasswordManager {
 
     // Hide account details when selection changes
     document.getElementById('account-details').style.display = 'none';
+
+    // Set up event listener for selection changes
+    selector.addEventListener('change', () => this.handleAccountSelectionChange());
+  }
+
+  /**
+  * Handle account selection changes
+  * This ensures we completely reset the verification state when switching accounts
+  */
+  handleAccountSelectionChange() {
+    // Reset verification UI
+    document.getElementById('account-details').style.display = 'none';
+
+    // Clear file input to force a fresh file selection
+    const fileInput = document.getElementById('verify-image');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+
+    // Clear any previous alerts
+    const alertElement = document.getElementById('alert-message');
+    if (alertElement) {
+      alertElement.style.display = 'none';
+    }
+
+    // Log the selection change for debugging
+    const selectedAccountId = document.getElementById('account-selector').value;
+    if (selectedAccountId) {
+      const account = this.accounts.find(acc => acc.id === selectedAccountId);
+      console.log('Account selection changed to:', account ? account.name : 'None');
+    } else {
+      console.log('No account selected');
+    }
   }
 
   /**
@@ -320,31 +376,91 @@ class PasswordManager {
       // Show loading message
       document.getElementById('accounts-list').innerHTML = '<p>Loading accounts from database...</p>';
 
-      // Get accounts from database via client
-      const accounts = await this.databaseClient.getAllAccounts();
+      // Get accounts from database via client with detailed error logging
+      console.log("Attempting to load accounts from database...");
+      let accounts = [];
+      try {
+        accounts = await this.databaseClient.getAllAccounts();
+        console.log(`Successfully loaded ${accounts.length} accounts from database`);
+      } catch (dbError) {
+        console.error('Database error:', dbError);
+
+        // Fallback to localStorage
+        console.log("Falling back to localStorage...");
+        const savedAccounts = localStorage.getItem('imagePasswordAccounts');
+        if (savedAccounts) {
+          accounts = JSON.parse(savedAccounts);
+          console.log(`Loaded ${accounts.length} accounts from localStorage`);
+        }
+
+        this.showAlert('Database connection failed, using localStorage instead', 'warning');
+      }
+
       this.accounts = accounts;
 
       // Update UI
       this.updateAccountsList();
       this.updateAccountSelector();
     } catch (error) {
-      console.error('Error loading accounts:', error);
-      this.showAlert('Error loading accounts from database', 'danger');
+      console.error('Critical error loading accounts:', error);
+      this.showAlert('Error loading accounts. Check console for details', 'danger');
     }
   }
 
   /**
- * Reset the verification form and state
- */
-  resetVerification() {
-    // Reset the file input
-    document.getElementById('verify-image').value = '';
+   * Completely reset the verification state
+   * This can be called at any time to ensure a fresh verification process
+   */
+  resetVerificationState() {
+    console.log('Resetting verification state');
 
-    // Hide account details
+    // Reset UI elements
     document.getElementById('account-details').style.display = 'none';
 
-    // Clear any alerts
-    document.getElementById('alert-message').style.display = 'none';
+    // Clear file input
+    const fileInput = document.getElementById('verify-image');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+
+    // Reset any temporary data
+    this._lastVerification = null;
+
+    // Clear canvas cache
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 1;
+    canvas.height = 1;
+    ctx.clearRect(0, 0, 1, 1);
+
+    // Force garbage collection if possible
+    if (window.gc) {
+      window.gc();
+    }
+
+    // Only add the reset button if neither reset-verify-button nor reset-verification-button exists
+    if (!document.getElementById('reset-verify-button') && !document.getElementById('reset-verification-button')) {
+      const verifyButton = document.getElementById('verify-button');
+      if (verifyButton) {
+        const resetButton = document.createElement('button');
+        resetButton.id = 'reset-verify-button';
+        resetButton.className = 'secondary';
+        resetButton.textContent = 'Reset';
+        resetButton.style.marginLeft = '10px';
+        resetButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.resetVerificationState();
+          this.showAlert('Verification state has been reset', 'info');
+        });
+
+        verifyButton.parentNode.insertBefore(resetButton, verifyButton.nextSibling);
+      }
+    }
+  }
+
+  // Add this method to alias resetVerificationState for consistency
+  resetVerification() {
+    this.resetVerificationState();
   }
 
 }

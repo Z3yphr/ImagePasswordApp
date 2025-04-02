@@ -113,30 +113,67 @@ class ImagePasswordSystem {
   }
 
   /**
-   * Verify if an image matches the stored password
-   * @param {File} imageFile - The image file to verify
-   * @param {string} storedHash - The stored password hash to check against
-   * @returns {Promise<boolean>} Whether the image matches the stored password
-   */
+ * Verify if an image matches the stored password
+ * This is the correct method for the ImagePasswordSystem class
+ *
+ * @param {File} imageFile - The image file to verify
+ * @param {string} storedHash - The stored password hash to check against
+ * @returns {Promise<boolean>} Whether the image matches the stored password
+ */
   async verifyImagePassword(imageFile, storedHash) {
     try {
-      // Generate a fresh hash from the uploaded image
-      console.log("Processing image for verification...");
-      const hash = await this.generateImageHash(imageFile);
-      console.log("Generated hash:", hash);
+      // Generate a unique identifier for this verification attempt
+      const verificationId = Date.now().toString();
+      console.log(`Starting verification ${verificationId}`);
+
+      // Load the image manually to ensure no caching
+      const image = await this.loadImage(imageFile);
+      console.log(`Verification ${verificationId}: Image loaded, dimensions: ${image.width}x${image.height}`);
+
+      // Create a fresh canvas for this verification
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      // Resize to small dimensions to normalize the image
+      canvas.width = 8;
+      canvas.height = 8;
+
+      // Draw the image in grayscale
+      ctx.filter = 'grayscale(100%)';
+      ctx.drawImage(image, 0, 0, 8, 8);
+
+      // Get pixel data
+      const pixelData = ctx.getImageData(0, 0, 8, 8).data;
+
+      // Calculate average pixel value
+      let sum = 0;
+      for (let i = 0; i < pixelData.length; i += 4) {
+        sum += pixelData[i]; // Just using red channel since image is grayscale
+      }
+      const avg = sum / (pixelData.length / 4);
+
+      // Generate binary hash based on whether pixel is above or below average
+      let hash = '';
+      for (let i = 0; i < pixelData.length; i += 4) {
+        hash += pixelData[i] >= avg ? '1' : '0';
+      }
+
+      // Convert binary hash to hex for easier use
+      const hexHash = this.binaryToHex(hash);
+      console.log(`Verification ${verificationId}: Generated hash: ${hexHash}`);
 
       // Generate password from the hash
-      const password = await this.generatePassword(hash);
-      console.log("Generated password:", password.substring(0, 10) + "...");
-      console.log("Stored password:", storedHash.substring(0, 10) + "...");
+      const password = await this.generatePassword(hexHash);
+      console.log(`Verification ${verificationId}: Generated password: ${password.substring(0, 10)}...`);
+      console.log(`Verification ${verificationId}: Stored password: ${storedHash.substring(0, 10)}...`);
 
       // Compare the generated password with the stored one
       const isMatch = password === storedHash;
-      console.log("Password match:", isMatch);
+      console.log(`Verification ${verificationId}: Password match: ${isMatch}`);
 
       return isMatch;
     } catch (error) {
-      console.error("Error in verification process:", error);
+      console.error('Error verifying image password:', error);
       throw error;
     }
   }
