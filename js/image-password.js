@@ -1,12 +1,18 @@
-// Image Password System
-
+/**
+ * ImagePasswordSystem - Core functionality for image-based password generation
+ * This module handles the perceptual hashing of images and password verification
+ */
 class ImagePasswordSystem {
   constructor() {
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
   }
 
-  // Generate a perceptual hash for the image
+  /**
+   * Generate a perceptual hash for the image
+   * @param {File} imageFile - The image file to hash
+   * @returns {Promise<string>} A hex string representing the image hash
+   */
   async generateImageHash(imageFile) {
     try {
       // Load the image
@@ -46,7 +52,11 @@ class ImagePasswordSystem {
     }
   }
 
-  // Load an image from a file
+  /**
+   * Load an image from a file
+   * @param {File} file - The image file to load
+   * @returns {Promise<HTMLImageElement>} The loaded image element
+   */
   loadImage(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -63,7 +73,11 @@ class ImagePasswordSystem {
     });
   }
 
-  // Convert binary string to hexadecimal
+  /**
+   * Convert binary string to hexadecimal
+   * @param {string} binary - Binary string to convert
+   * @returns {string} Hexadecimal representation
+   */
   binaryToHex(binary) {
     let hex = '';
     for (let i = 0; i < binary.length; i += 4) {
@@ -73,13 +87,21 @@ class ImagePasswordSystem {
     return hex;
   }
 
-  // Generate a password from the image hash
-  generatePassword(hash) {
+  /**
+   * Generate a password from the image hash
+   * @param {string} hash - The image hash
+   * @returns {Promise<string>} The generated password
+   */
+  async generatePassword(hash) {
     // Create a more secure password by applying SHA-256 to the hash
     return this.sha256(hash);
   }
 
-  // Simple implementation of SHA-256 (in a real app, use a proper crypto library)
+  /**
+   * Simple implementation of SHA-256
+   * @param {string} message - The message to hash
+   * @returns {Promise<string>} SHA-256 hash as hex string
+   */
   async sha256(message) {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
@@ -89,7 +111,12 @@ class ImagePasswordSystem {
     return hashHex;
   }
 
-  // Verify if an image matches the stored password
+  /**
+   * Verify if an image matches the stored password
+   * @param {File} imageFile - The image file to verify
+   * @param {string} storedHash - The stored password hash to check against
+   * @returns {Promise<boolean>} Whether the image matches the stored password
+   */
   async verifyImagePassword(imageFile, storedHash) {
     const hash = await this.generateImageHash(imageFile);
     const password = await this.generatePassword(hash);
@@ -97,68 +124,5 @@ class ImagePasswordSystem {
   }
 }
 
-// Example usage
-const app = {
-  imagePasswordSystem: new ImagePasswordSystem(),
-  storedPassword: null,
-
-  init() {
-    // Set up event listeners
-    document.getElementById('registerButton').addEventListener('click', this.registerImage.bind(this));
-    document.getElementById('verifyButton').addEventListener('click', this.verifyImage.bind(this));
-  },
-
-  async registerImage() {
-    const fileInput = document.getElementById('registerImage');
-    if (fileInput.files.length === 0) {
-      this.showMessage('Please select an image to register');
-      return;
-    }
-
-    try {
-      const file = fileInput.files[0];
-      const hash = await this.imagePasswordSystem.generateImageHash(file);
-      this.storedPassword = await this.imagePasswordSystem.generatePassword(hash);
-
-      this.showMessage(`Image registered! Generated password: ${this.storedPassword.substring(0, 10)}...`);
-    } catch (error) {
-      this.showMessage(`Error: ${error.message}`);
-    }
-  },
-
-  async verifyImage() {
-    const fileInput = document.getElementById('verifyImage');
-    if (fileInput.files.length === 0) {
-      this.showMessage('Please select an image to verify');
-      return;
-    }
-
-    if (!this.storedPassword) {
-      this.showMessage('Please register an image first');
-      return;
-    }
-
-    try {
-      const file = fileInput.files[0];
-      const isMatch = await this.imagePasswordSystem.verifyImagePassword(file, this.storedPassword);
-
-      if (isMatch) {
-        this.showMessage('Success! The image matches the registered image.');
-      } else {
-        this.showMessage('Authentication failed. The image does not match.');
-      }
-    } catch (error) {
-      this.showMessage(`Error: ${error.message}`);
-    }
-  },
-
-  showMessage(message) {
-    const messageElement = document.getElementById('message');
-    messageElement.textContent = message;
-  }
-};
-
-// Initialize the app when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-  app.init();
-});
+// Export the class for use in other modules
+export default ImagePasswordSystem;

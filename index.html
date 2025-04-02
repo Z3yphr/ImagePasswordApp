@@ -3,277 +3,121 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Image Password System</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      .container {
-        display: flex;
-        gap: 20px;
-      }
-      .panel {
-        flex: 1;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        padding: 16px;
-        background-color: #f9f9f9;
-      }
-      h1 {
-        color: #333;
-        text-align: center;
-      }
-      h2 {
-        color: #555;
-      }
-      button {
-        background-color: #4caf50;
-        color: white;
-        padding: 10px 15px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-top: 10px;
-      }
-      button:hover {
-        background-color: #45a049;
-      }
-      #message {
-        margin-top: 20px;
-        padding: 10px;
-        border-radius: 4px;
-        font-weight: bold;
-      }
-      .success {
-        background-color: #dff0d8;
-        color: #3c763d;
-      }
-      .error {
-        background-color: #f2dede;
-        color: #a94442;
-      }
-      .info {
-        background-color: #d9edf7;
-        color: #31708f;
-      }
-    </style>
+    <title>Image Password Manager</title>
+    <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
-    <h1>Image Password System</h1>
-    <p>
-      This system allows you to use an image as a password. Even if the filename
-      or format changes, as long as the visual content is the same, the system
-      will recognize it.
-    </p>
+    <header>
+      <h1>Image Password Manager</h1>
+      <p>Secure your accounts with unique image-based passwords</p>
+    </header>
 
     <div class="container">
-      <div class="panel">
-        <h2>Register Image</h2>
-        <p>Select an image to use as your password:</p>
-        <input type="file" id="registerImage" accept="image/*" />
-        <button id="registerButton">Register Image</button>
+      <div class="tabs">
+        <div class="tab active" data-tab="accounts">Manage Accounts</div>
+        <div class="tab" data-tab="register">Register New Image</div>
+        <div class="tab" data-tab="login">Login with Image</div>
       </div>
 
-      <div class="panel">
-        <h2>Verify Image</h2>
-        <p>Test your image-based authentication:</p>
-        <input type="file" id="verifyImage" accept="image/*" />
-        <button id="verifyButton">Verify Image</button>
+      <div id="accounts" class="tab-content active">
+        <div class="card">
+          <div class="card-header">
+            <h2>Your Stored Accounts</h2>
+          </div>
+          <div class="card-body">
+            <div id="accounts-list">
+              <p>Loading your accounts...</p>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <div id="register" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2>Register New Image Password</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label for="account-name">Account Name:</label>
+              <input
+                type="text"
+                id="account-name"
+                placeholder="e.g., Gmail, Facebook, etc."
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="username">Username:</label>
+              <input
+                type="text"
+                id="username"
+                placeholder="Your username for this account"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="register-image">Select Image Password:</label>
+              <input type="file" id="register-image" accept="image/*" />
+              <div id="preview-container" style="display: none">
+                <p>Image Preview:</p>
+                <img id="image-preview" class="image-preview" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="notes">Notes (optional):</label>
+              <input
+                type="text"
+                id="notes"
+                placeholder="Additional information about this account"
+              />
+            </div>
+
+            <button id="register-button">Register Image Password</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="login" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2>Login with Image Password</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label for="account-selector">Select Account:</label>
+              <select id="account-selector">
+                <option value="">Select an account</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="verify-image">Upload Image Password:</label>
+              <input type="file" id="verify-image" accept="image/*" />
+            </div>
+
+            <button id="verify-button">Verify Image</button>
+
+            <div
+              id="account-details"
+              style="display: none"
+              class="alert alert-success"
+            >
+              <h3>Account Information</h3>
+              <p>
+                <strong>Username:</strong> <span id="account-username"></span>
+              </p>
+              <p><strong>Notes:</strong> <span id="account-notes"></span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="alert-message" style="display: none" class="alert"></div>
     </div>
 
-    <div id="message" class="info">Welcome to the Image Password System!</div>
-
-    <script>
-      // Image Password System
-      class ImagePasswordSystem {
-        constructor() {
-          this.canvas = document.createElement("canvas");
-          this.ctx = this.canvas.getContext("2d");
-        }
-
-        // Generate a perceptual hash for the image
-        async generateImageHash(imageFile) {
-          try {
-            // Load the image
-            const image = await this.loadImage(imageFile);
-
-            // Resize to small dimensions to normalize the image
-            this.canvas.width = 8;
-            this.canvas.height = 8;
-
-            // Draw the image in grayscale
-            this.ctx.filter = "grayscale(100%)";
-            this.ctx.drawImage(image, 0, 0, 8, 8);
-
-            // Get pixel data
-            const pixelData = this.ctx.getImageData(0, 0, 8, 8).data;
-
-            // Calculate average pixel value
-            let sum = 0;
-            for (let i = 0; i < pixelData.length; i += 4) {
-              sum += pixelData[i]; // Just using red channel since image is grayscale
-            }
-            const avg = sum / (pixelData.length / 4);
-
-            // Generate binary hash based on whether pixel is above or below average
-            let hash = "";
-            for (let i = 0; i < pixelData.length; i += 4) {
-              hash += pixelData[i] >= avg ? "1" : "0";
-            }
-
-            // Convert binary hash to hex for easier use
-            const hexHash = this.binaryToHex(hash);
-
-            return hexHash;
-          } catch (error) {
-            console.error("Error generating image hash:", error);
-            throw error;
-          }
-        }
-
-        // Load an image from a file
-        loadImage(file) {
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-
-            reader.onload = (event) => {
-              const img = new Image();
-              img.onload = () => resolve(img);
-              img.onerror = () => reject(new Error("Failed to load image"));
-              img.src = event.target.result;
-            };
-
-            reader.onerror = () => reject(new Error("Failed to read file"));
-            reader.readAsDataURL(file);
-          });
-        }
-
-        // Convert binary string to hexadecimal
-        binaryToHex(binary) {
-          let hex = "";
-          for (let i = 0; i < binary.length; i += 4) {
-            const chunk = binary.substr(i, 4);
-            hex += parseInt(chunk, 2).toString(16);
-          }
-          return hex;
-        }
-
-        // Generate a password from the image hash
-        generatePassword(hash) {
-          // Create a more secure password by applying SHA-256 to the hash
-          return this.sha256(hash);
-        }
-
-        // Simple implementation of SHA-256
-        async sha256(message) {
-          const encoder = new TextEncoder();
-          const data = encoder.encode(message);
-          const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-          const hashArray = Array.from(new Uint8Array(hashBuffer));
-          const hashHex = hashArray
-            .map((b) => b.toString(16).padStart(2, "0"))
-            .join("");
-          return hashHex;
-        }
-
-        // Verify if an image matches the stored password
-        async verifyImagePassword(imageFile, storedHash) {
-          const hash = await this.generateImageHash(imageFile);
-          const password = await this.generatePassword(hash);
-          return password === storedHash;
-        }
-      }
-
-      // Application logic
-      const app = {
-        imagePasswordSystem: new ImagePasswordSystem(),
-        storedPassword: null,
-
-        init() {
-          // Set up event listeners
-          document
-            .getElementById("registerButton")
-            .addEventListener("click", this.registerImage.bind(this));
-          document
-            .getElementById("verifyButton")
-            .addEventListener("click", this.verifyImage.bind(this));
-        },
-
-        async registerImage() {
-          const fileInput = document.getElementById("registerImage");
-          if (fileInput.files.length === 0) {
-            this.showMessage("Please select an image to register", "error");
-            return;
-          }
-
-          try {
-            const file = fileInput.files[0];
-            const hash = await this.imagePasswordSystem.generateImageHash(file);
-            this.storedPassword =
-              await this.imagePasswordSystem.generatePassword(hash);
-
-            this.showMessage(
-              `Image registered! Generated password: ${this.storedPassword.substring(
-                0,
-                10
-              )}...`,
-              "success"
-            );
-          } catch (error) {
-            this.showMessage(`Error: ${error.message}`, "error");
-          }
-        },
-
-        async verifyImage() {
-          const fileInput = document.getElementById("verifyImage");
-          if (fileInput.files.length === 0) {
-            this.showMessage("Please select an image to verify", "error");
-            return;
-          }
-
-          if (!this.storedPassword) {
-            this.showMessage("Please register an image first", "info");
-            return;
-          }
-
-          try {
-            const file = fileInput.files[0];
-            const isMatch = await this.imagePasswordSystem.verifyImagePassword(
-              file,
-              this.storedPassword
-            );
-
-            if (isMatch) {
-              this.showMessage(
-                "Success! The image matches the registered image.",
-                "success"
-              );
-            } else {
-              this.showMessage(
-                "Authentication failed. The image does not match.",
-                "error"
-              );
-            }
-          } catch (error) {
-            this.showMessage(`Error: ${error.message}`, "error");
-          }
-        },
-
-        showMessage(message, type) {
-          const messageElement = document.getElementById("message");
-          messageElement.textContent = message;
-          messageElement.className = type;
-        },
-      };
-
-      // Initialize the app when the DOM is loaded
-      document.addEventListener("DOMContentLoaded", () => {
-        app.init();
-      });
-    </script>
+    <!-- Note the type="module" which allows us to use ES6 imports -->
+    <script type="module" src="js/app.js"></script>
   </body>
 </html>
