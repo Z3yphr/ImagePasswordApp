@@ -4,15 +4,19 @@
  */
 
 import ImagePasswordSystem from './image-password.js';
+import DatabaseClient from './db-client.js';
 
 class PasswordManager {
   constructor() {
     this.imagePasswordSystem = new ImagePasswordSystem();
+    this.databaseClient = new DatabaseClient();
     this.accounts = [];
-    this.loadAccounts();
 
     // Initialize UI elements
     this.initUI();
+
+    // Load accounts from database
+    this.loadAccounts();
   }
 
   /**
@@ -32,8 +36,8 @@ class PasswordManager {
     document.getElementById('account-selector').addEventListener('change', () => this.updateAccountSelection());
     document.getElementById('verify-button').addEventListener('click', () => this.verifyImage());
 
-    // Account management
-    document.getElementById('accounts-tab').addEventListener('click', () => this.updateAccountsList());
+    // Add this line in the initUI() function to set up the event listener:
+    document.getElementById('reset-verify-button').addEventListener('click', () => this.resetVerification());
 
     // Initialize lists
     this.updateAccountsList();
@@ -106,7 +110,7 @@ class PasswordManager {
       const hash = await this.imagePasswordSystem.generateImageHash(imageFile);
       const password = await this.imagePasswordSystem.generatePassword(hash);
 
-      // Add new account
+      // Create new account object
       const newAccount = {
         id: Date.now().toString(),
         name: accountName,
@@ -116,8 +120,18 @@ class PasswordManager {
         createdAt: new Date().toISOString()
       };
 
+      // Add to database via client
+      await this.databaseClient.addAccount(
+        newAccount.id,
+        newAccount.name,
+        newAccount.username,
+        newAccount.password,
+        newAccount.notes,
+        newAccount.createdAt
+      );
+
+      // Update local accounts array
       this.accounts.push(newAccount);
-      this.saveAccounts();
 
       // Update UI
       this.updateAccountsList();
@@ -186,16 +200,24 @@ class PasswordManager {
    * Delete an account
    * @param {string} accountId - The ID of the account to delete
    */
-  deleteAccount(accountId) {
+  async deleteAccount(accountId) {
     if (!confirm('Are you sure you want to delete this account?')) return;
 
-    this.accounts = this.accounts.filter(account => account.id !== accountId);
-    this.saveAccounts();
+    try {
+      // Delete from database via client
+      await this.databaseClient.deleteAccount(accountId);
 
-    this.updateAccountsList();
-    this.updateAccountSelector();
+      // Update local accounts array
+      this.accounts = this.accounts.filter(account => account.id !== accountId);
 
-    this.showAlert('Account deleted successfully!', 'success');
+      // Update UI
+      this.updateAccountsList();
+      this.updateAccountSelector();
+
+      this.showAlert('Account deleted successfully!', 'success');
+    } catch (error) {
+      this.showAlert(`Error deleting account: ${error.message}`, 'danger');
+    }
   }
 
   /**
@@ -291,45 +313,40 @@ class PasswordManager {
   }
 
   /**
-   * Load accounts from localStorage
+   * Load accounts from the database
    */
-  loadAccounts() {
+  async loadAccounts() {
     try {
-      // First try to load from file (will work if file exists and we're not in a browser)
-      fetch('data/passwords.json')
-        .then(response => response.json())
-        .then(data => {
-          this.accounts = data;
-          this.updateAccountsList();
-          this.updateAccountSelector();
-        })
-        .catch(err => {
-          console.log('Could not load from file, trying localStorage');
-          // Fall back to localStorage
-          const savedAccounts = localStorage.getItem('imagePasswordAccounts');
-          if (savedAccounts) {
-            this.accounts = JSON.parse(savedAccounts);
-            this.updateAccountsList();
-            this.updateAccountSelector();
-          }
-        });
+      // Show loading message
+      document.getElementById('accounts-list').innerHTML = '<p>Loading accounts from database...</p>';
+
+      // Get accounts from database via client
+      const accounts = await this.databaseClient.getAllAccounts();
+      this.accounts = accounts;
+
+      // Update UI
+      this.updateAccountsList();
+      this.updateAccountSelector();
     } catch (error) {
       console.error('Error loading accounts:', error);
-      this.accounts = [];
+      this.showAlert('Error loading accounts from database', 'danger');
     }
   }
 
   /**
-   * Save accounts to localStorage and file if possible
-   */
-  saveAccounts() {
-    // Save to localStorage
-    localStorage.setItem('imagePasswordAccounts', JSON.stringify(this.accounts));
+ * Reset the verification form and state
+ */
+  resetVerification() {
+    // Reset the file input
+    document.getElementById('verify-image').value = '';
 
-    // In a real application, you would send this data to a server
-    // For this example, we'll just log that it would be saved
-    console.log('Accounts saved to localStorage. In a real app, this would be saved to a server or file.');
+    // Hide account details
+    document.getElementById('account-details').style.display = 'none';
+
+    // Clear any alerts
+    document.getElementById('alert-message').style.display = 'none';
   }
+
 }
 
 // Initialize the Password Manager and make it globally accessible

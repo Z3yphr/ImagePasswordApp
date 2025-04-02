@@ -2,6 +2,7 @@
  * ImagePasswordSystem - Core functionality for image-based password generation
  * This module handles the perceptual hashing of images and password verification
  */
+
 class ImagePasswordSystem {
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -118,9 +119,26 @@ class ImagePasswordSystem {
    * @returns {Promise<boolean>} Whether the image matches the stored password
    */
   async verifyImagePassword(imageFile, storedHash) {
-    const hash = await this.generateImageHash(imageFile);
-    const password = await this.generatePassword(hash);
-    return password === storedHash;
+    try {
+      // Generate a fresh hash from the uploaded image
+      console.log("Processing image for verification...");
+      const hash = await this.generateImageHash(imageFile);
+      console.log("Generated hash:", hash);
+
+      // Generate password from the hash
+      const password = await this.generatePassword(hash);
+      console.log("Generated password:", password.substring(0, 10) + "...");
+      console.log("Stored password:", storedHash.substring(0, 10) + "...");
+
+      // Compare the generated password with the stored one
+      const isMatch = password === storedHash;
+      console.log("Password match:", isMatch);
+
+      return isMatch;
+    } catch (error) {
+      console.error("Error in verification process:", error);
+      throw error;
+    }
   }
 }
 
