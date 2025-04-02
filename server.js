@@ -40,6 +40,8 @@ const db = new sqlite3.Database('./data/passwords.db', (err) => {
                 username TEXT NOT NULL,
                 password TEXT NOT NULL,
                 notes TEXT,
+                type TEXT DEFAULT 'uploaded',
+                rawSeed TEXT DEFAULT NULL,
                 createdAt TEXT NOT NULL
             )
         `, (err) => {
@@ -85,7 +87,7 @@ app.get('/api/accounts/:id', (req, res) => {
 
 // Add a new account
 app.post('/api/accounts', (req, res) => {
-  const { id, name, username, password, notes, createdAt } = req.body;
+  const { id, name, username, password, notes, type, rawSeed, createdAt } = req.body;
 
   // Validate required fields
   if (!id || !name || !username || !password) {
@@ -93,8 +95,8 @@ app.post('/api/accounts', (req, res) => {
   }
 
   db.run(
-    'INSERT INTO accounts (id, name, username, password, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
-    [id, name, username, password, notes || '', createdAt || new Date().toISOString()],
+    'INSERT INTO accounts (id, name, username, password, notes, type, rawSeed, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, name, username, password, notes || '', type || 'uploaded', rawSeed, createdAt || new Date().toISOString()],
     function (err) {
       if (err) {
         console.error('Error adding account', err);

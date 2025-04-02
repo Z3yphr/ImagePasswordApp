@@ -85,13 +85,15 @@ class DatabaseClient {
    * @param {string} createdAt - Creation timestamp
    * @returns {Promise<void>}
    */
-  async addAccount(id, name, username, password, notes, createdAt) {
+  async addAccount(id, name, username, password, notes, type, rawSeed = null, createdAt) {
     const accountData = {
       id,
       name,
       username,
       password,
       notes: notes || '',
+      type: type || 'uploaded', // 'uploaded' or 'generated'
+      rawSeed: rawSeed, // Only present for generated passwords
       createdAt: createdAt || new Date().toISOString()
     };
 
