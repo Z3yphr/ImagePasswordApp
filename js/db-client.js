@@ -1,11 +1,12 @@
 /**
  * Database client for the Image Password App
  * Communicates with the server API for database operations
+ * Updated to use HTTPS
  */
 
 class DatabaseClient {
   constructor() {
-    this.apiUrl = 'http://localhost:3000/api';
+    this.apiUrl = 'https://localhost:3000/api';
   }
 
   /**

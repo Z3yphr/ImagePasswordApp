@@ -1,15 +1,24 @@
 /**
  * Server for Image Password App
  * Provides API endpoints for SQLite database operations
+ * Uses HTTPS for secure communication
  */
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const cors = require('cors');
+const https = require('https');
+const fs = require('fs');
 
 // Initialize express app
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// SSL/TLS options
+const httpsOptions = {
+  key: fs.readFileSync(path.join(__dirname, 'certs', 'key.pem')),
+  cert: fs.readFileSync(path.join(__dirname, 'certs', 'cert.pem'))
+};
 
 // Middleware
 app.use(cors());
@@ -143,9 +152,12 @@ app.delete('/api/accounts/:id', (req, res) => {
   });
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Create HTTPS server
+const httpsServer = https.createServer(httpsOptions, app);
+
+// Start the HTTPS server
+httpsServer.listen(PORT, () => {
+  console.log(`HTTPS Server running on https://localhost:${PORT}`);
 });
 
 // Handle graceful shutdown
