@@ -1,0 +1,12 @@
+# Ignore database and sensitive files
+data/passwords.db
+data/passwords.json
+certs/key.pem
+certs/cert.pem
+
+# Node modules (if you ever run npm install)
+node_modules/
+
+# OS and editor files
+.DS_Store
+*.log
