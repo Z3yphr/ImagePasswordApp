@@ -25,6 +25,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, './')));
 
+// Ensure data directory exists before opening the database
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir);
+}
+
 // Initialize SQLite database
 const db = new sqlite3.Database('./data/passwords.db', (err) => {
   if (err) {
